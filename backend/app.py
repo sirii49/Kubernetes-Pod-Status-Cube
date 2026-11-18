@@ -188,26 +188,47 @@ def collect_cluster_data(namespace=None):
 def index():
     return render_template("index.html")
 
+
 @app.get("/api/cluster")
 def cluster():
+    if DEMO_MODE:
+        pods = demo_pods()
+        deployments = demo_deployments()
+
+        return jsonify({
+            "connected": True,
+            "cluster": "Demo Kubernetes (Simulated)",
+            "node_count": 1,
+            "pod_count": len(pods),
+            "running": sum(p["display_state"] == "running" for p in pods),
+            "crashed": sum(p["display_state"] == "crash" for p in pods),
+            "updating": sum(p["display_state"] == "updating" for p in pods),
+            "pods": pods,
+            "deployments": deployments,
+            "refreshed_at": datetime.now(timezone.utc).isoformat()
+        })
+
     try:
         core, apps, pods, deployments = collect_cluster_data()
         nodes = core.list_node().items
         return jsonify({
-            "connected": True, "cluster": "Kubernetes (kubeconfig)",
-            "node_count": len(nodes), "pod_count": len(pods),
+            "connected": True,
+            "cluster": "Kubernetes (kubeconfig)",
+            "node_count": len(nodes),
+            "pod_count": len(pods),
             "running": sum(p["display_state"] == "running" for p in pods),
             "crashed": sum(p["display_state"] == "crash" for p in pods),
             "updating": sum(p["display_state"] == "updating" for p in pods),
-            "pods": pods, "deployments": deployments,
+            "pods": pods,
+            "deployments": deployments,
             "refreshed_at": datetime.now(timezone.utc).isoformat()
         })
     except (ConfigException, ApiException, OSError) as exc:
-        return jsonify({"connected": False, "error": str(exc),
-                        "hint": "Start Minikube and check that kubectl can reach the cluster."}), 503
+        return jsonify({"connected": False, "error": str(exc)}), 503
     except Exception as exc:
         app.logger.exception("Unexpected monitoring error")
         return jsonify({"connected": False, "error": str(exc)}), 500
+
 
 @app.get("/api/pods")
 def pods_endpoint():
