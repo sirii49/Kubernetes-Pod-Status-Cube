@@ -1,0 +1,20 @@
+# OPTIONAL DEMO ONLY: applies a deliberately invalid image so the monitor
+# can show ImagePullBackOff as RED. Delete it after the demonstration.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-error-demo
+  namespace: pod-cube-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-error-demo
+  template:
+    metadata:
+      labels:
+        app: image-error-demo
+    spec:
+      containers:
+        - name: demo
+          image: example.invalid/does-not-exist:demo

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pod Status Cube | Kubernetes Monitor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">◈</div><div><strong>Pod Status Cube</strong><small>KUBERNETES MONITOR</small></div></div>
+    <div class="side-label">WORKSPACE</div>
+    <button class="nav-item active" data-page="overview">▦ <span>Overview</span></button>
+    <button class="nav-item" data-page="pods">▣ <span>Pod monitoring</span></button>
+    <button class="nav-item" data-page="deployments">⇧ <span>Deployments</span></button>
+    <button class="nav-item" data-page="events">◷ <span>Cluster events</span></button>
+    <button class="nav-item" data-page="alerts">⚑ <span>Alerts</span></button>
+    <button class="nav-item" data-page="history">⌁ <span>History</span></button>
+    <div class="sidebar-bottom"><span class="live-dot"></span><span>Local monitoring</span><small>Minikube / kubeconfig</small></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><div class="eyebrow">CLUSTER OBSERVABILITY</div><h1 id="page-title">Overview</h1></div>
+      <div class="top-actions">
+        <span id="connection" class="connection disconnected"><i></i> Connecting...</span>
+        <button class="icon-button" id="refresh-btn" title="Refresh now">↻</button>
+      </div>
+    </header>
+
+    <section id="connection-warning" class="warning hidden">
+      <strong>Cannot reach Kubernetes.</strong>
+      <span id="connection-error">Start Minikube and confirm kubectl can connect.</span>
+      <div class="command">minikube start</div>
+    </section>
+
+    <section id="page-overview" class="page">
+      <div class="welcome-row"><div><h2>Cluster overview</h2><p>A live view of workloads running in your Minikube cluster.</p></div><div class="refresh-note">AUTO REFRESH <b>5 SEC</b></div></div>
+      <div class="stats-grid">
+        <article class="stat-card"><div class="stat-top"><span>Total pods</span><span class="stat-icon">▣</span></div><strong id="total-pods">—</strong><small>Across all namespaces</small></article>
+        <article class="stat-card green-card"><div class="stat-top"><span>Running</span><span class="led green"></span></div><strong id="running-pods">—</strong><small>Healthy and ready</small></article>
+        <article class="stat-card red-card"><div class="stat-top"><span>Crashes</span><span class="led red"></span></div><strong id="crashed-pods">—</strong><small>Failed or crash-looping</small></article>
+        <article class="stat-card yellow-card"><div class="stat-top"><span>Updating</span><span class="led yellow"></span></div><strong id="updating-pods">—</strong><small>Deployment rollout in progress</small></article>
+      </div>
+      <div class="content-grid">
+        <article class="panel status-panel"><div class="panel-heading"><div><h3>Pod status cube</h3><p>Digital LED indicators based on Kubernetes state</p></div><span class="live-pill">● LIVE</span></div>
+          <div class="cube-area">
+            <div class="cube" id="main-cube"><div class="cube-light"></div><span id="cube-label">WAITING</span></div>
+            <div class="legend"><div><i class="led green"></i><span>Running</span><b id="legend-running">0</b></div><div><i class="led red"></i><span>Crash</span><b id="legend-crash">0</b></div><div><i class="led yellow"></i><span>Updating</span><b id="legend-updating">0</b></div></div>
+          </div>
+        </article>
+        <article class="panel chart-panel"><div class="panel-heading"><div><h3>Workload distribution</h3><p>Current Pod classification</p></div></div><div class="chart-wrap"><canvas id="statusChart"></canvas></div></article>
+      </div>
+      <article class="panel"><div class="panel-heading"><div><h3>Pods at a glance</h3><p>Latest status from the cluster</p></div><button class="text-button" data-goto="pods">View all →</button></div><div class="table-wrap"><table><thead><tr><th>POD NAME</th><th>NAMESPACE</th><th>KUBERNETES PHASE</th><th>STATUS CUBE</th><th>RESTARTS</th></tr></thead><tbody id="overview-pods"><tr><td colspan="5" class="empty">Waiting for cluster connection…</td></tr></tbody></table></div></article>
+    </section>
+
+    <section id="page-pods" class="page hidden">
+      <div class="welcome-row"><div><h2>Pod monitoring</h2><p>Inspect Pods discovered from the Kubernetes API.</p></div><select id="namespace-filter"><option value="">All namespaces</option></select></div>
+      <article class="panel"><div class="table-tools"><input id="pod-search" placeholder="Search pod name..."><select id="status-filter"><option value="">All statuses</option><option value="running">Running</option><option value="crash">Crash</option><option value="updating">Updating</option><option value="pending">Pending</option><option value="not-ready">Not ready</option></select></div>
+      <div class="table-wrap"><table><thead><tr><th>POD</th><th>NAMESPACE</th><th>PHASE</th><th>STATUS</th><th>READY</th><th>RESTARTS</th><th>NODE</th><th>IP</th></tr></thead><tbody id="pods-table"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody></table></div></article>
+      <article class="panel detail-panel hidden" id="pod-detail"><div class="panel-heading"><div><h3 id="detail-title">Pod details</h3><p id="detail-subtitle"></p></div><button class="text-button" id="close-detail">Close ×</button></div><div id="detail-content"></div></article>
+    </section>
+
+    <section id="page-deployments" class="page hidden"><div class="welcome-row"><div><h2>Deployments</h2><p>Replica availability and rollout progress.</p></div></div><article class="panel"><div class="table-wrap"><table><thead><tr><th>DEPLOYMENT</th><th>NAMESPACE</th><th>DESIRED</th><th>UPDATED</th><th>READY</th><th>AVAILABLE</th><th>ROLLOUT</th></tr></thead><tbody id="deployments-table"></tbody></table></div></article></section>
+    <section id="page-events" class="page hidden"><div class="welcome-row"><div><h2>Cluster events</h2><p>Recent Kubernetes events across namespaces.</p></div></div><article class="panel"><div class="table-wrap"><table><thead><tr><th>TYPE</th><th>REASON</th><th>OBJECT</th><th>NAMESPACE</th><th>MESSAGE</th><th>TIME</th></tr></thead><tbody id="events-table"></tbody></table></div></article></section>
+    <section id="page-alerts" class="page hidden"><div class="welcome-row"><div><h2>Alerts</h2><p>Crash and failure alerts detected during monitoring.</p></div><button class="secondary-button" id="ack-alerts">Acknowledge all</button></div><article class="panel"><div id="alerts-list" class="alert-list"></div></article></section>
+    <section id="page-history" class="page hidden"><div class="welcome-row"><div><h2>Monitoring history</h2><p>Pod state snapshots recorded in the local SQLite database.</p></div></div><article class="panel"><div class="table-wrap"><table><thead><tr><th>POD</th><th>NAMESPACE</th><th>STATE</th><th>RESTARTS</th><th>RECORDED AT</th></tr></thead><tbody id="history-table"></tbody></table></div></article></section>
+    <footer>Pod Status Cube <span>•</span> Local Minikube monitoring <span id="last-refresh">Not refreshed yet</span></footer>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body></html>

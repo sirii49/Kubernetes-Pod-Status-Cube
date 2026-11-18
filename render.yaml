@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: pod-status-cube-demo
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/cluster
+    envVars:
+      - key: DEMO_MODE
+        value: "true"
